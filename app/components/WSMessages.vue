@@ -49,7 +49,7 @@
     <div v-if="status !== 'OPEN'" class="text-center py-2">
       <div class="text-sm text-gray-500">
         <span v-if="status === 'CONNECTING'">Connecting...</span>
-        <span v-else-if="status === 'DISCONNECTED'">Disconnected</span>
+        <UButton v-else-if="status === 'DISCONNECTED'" label="Disconnected" :loading="loading" @click="connect"/>
         <span v-else-if="status === 'ERROR'">Connection error</span>
       </div>
     </div>
@@ -74,7 +74,7 @@ const props = defineProps({
   }
 });
 
-const { messages, sendChat, status, connect, disconnect } = useWS({
+const { loading, messages, sendChat, status, connect, disconnect } = useWS({
   decisionId: props.did,
   verticalKey: props.verticalKey,
   autoReconnect: true,

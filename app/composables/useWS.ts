@@ -23,6 +23,7 @@ export type WebSocketConfig = {
 };
 
 export function useWS(config: WebSocketConfig) {
+  const loading = ref(false);
   const messages = ref<ChatMessage[]>([]);
   const status = ref('DISCONNECTED');
   const isConnected = ref(false);
@@ -55,6 +56,7 @@ export function useWS(config: WebSocketConfig) {
   let wsInstance: unknown = null;
 
   async function connect() {
+    loading.value = true;
     try {
       // Get auth token
       const response = await $fetch('/api/ws/validate', {
@@ -140,6 +142,8 @@ export function useWS(config: WebSocketConfig) {
       if (config.onError) {
         config.onError(error);
       }
+    } finally {
+      loading.value = false;
     }
   }
 
@@ -185,6 +189,7 @@ export function useWS(config: WebSocketConfig) {
     status: readonly(status),
     isConnected: readonly(isConnected),
     connect,
-    disconnect
+    disconnect,
+    loading
   };
 }
