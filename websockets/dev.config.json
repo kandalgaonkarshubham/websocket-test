@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "websockets-worker",
+  "main": "./index.ts",
+  "compatibility_date": "2025-07-10",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "WEBSOCKETS",
+        "class_name": "WebSockets"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "WebSockets"
+      ]
+    }
+  ]
+}
