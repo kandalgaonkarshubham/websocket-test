@@ -18,8 +18,5 @@
         "WebSockets"
       ]
     }
-  ],
-  "vars": {
-    "NUXT_WEBSOCKET_SECRET": "16901cff6ab96f24c8e903be030f84e9247214b1d814938b853bd22aa1ba6c9007a6feda478354561ed17523a379e5303f794f1d5baa2b0d7f227761077c1aee"
-  }
+  ]
 }

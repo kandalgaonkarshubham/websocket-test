@@ -7,10 +7,6 @@
   "name": "wntp",
   "main": "./.output/server/index.mjs",
   "compatibility_date": "2025-07-10",
-  "assets": {
-      "binding": "ASSETS",
-      "directory": "./.output/public/"
-  },
   "observability": {
       "enabled": true
   },
