@@ -11,7 +11,8 @@
     "bindings": [
         {
             "name": "WEBSOCKETS",
-            "class_name": "WebSockets"
+            "class_name": "WebSockets",
+             "script_name": "websockets-worker"
         }
     ]
   },
