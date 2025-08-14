@@ -56,6 +56,10 @@ export function useWS(config: WebSocketConfig) {
   let wsInstance: unknown = null;
 
   async function connect() {
+    if (isConnected.value || loading.value) {
+      console.log('WebSocket already connected or connecting');
+      return;
+    }
     loading.value = true;
     try {
       // Get auth token
@@ -78,7 +82,7 @@ export function useWS(config: WebSocketConfig) {
       // connect to Durable Object directly
       wsInstance = useWebSocket(response.websocketUrl, {
         protocols: [protocol.replaceAll('=', ''), 'chat'],
-        autoReconnect: config.autoReconnect ?? true,
+        autoReconnect: config.autoReconnect ?? false,
         onConnected: () => {
           console.log('WebSocket connected');
           isConnected.value = true;

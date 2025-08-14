@@ -196,6 +196,16 @@ export class WebSockets implements DurableObject {
         verticalKey
       };
 
+      for (const [existingWs, existingData] of this.sessions.entries()) {
+        if (existingData.userEmail === userEmail && existingData.room === room) {
+          console.log(`[DO] Found old connection for ${userEmail}, closing it`);
+          try {
+            existingWs.close(4000, 'Another connection opened');
+          } catch {}
+          this.sessions.delete(existingWs); // ensure it's gone before we accept new one
+        }
+      }
+
       // Serialize attachment BEFORE accepting
       server.serializeAttachment(wsData);
 
