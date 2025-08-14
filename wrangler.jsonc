@@ -4,7 +4,7 @@
  */
  {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "wntp",
+  "name": "websocket-test",
   "main": "./.output/server/index.mjs",
   "compatibility_date": "2025-07-10",
   "observability": {
