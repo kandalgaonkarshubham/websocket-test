@@ -3,10 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "deploy": "wrangler deploy --local --config wrangler.jsonc",
-    "start": "wrangler dev --local --config wrangler.jsonc",
-    "dev": "WRANGLER_LOG=debug wrangler dev --local --config wrangler.jsonc",
-    "cf-typegen": "wrangler types"
+    "start": "pnpm i && pnpm run dev",
+    "dev": "wrangler dev --local --config wrangler.jsonc",
+    "dev:log": "WRANGLER_LOG=debug wrangler dev --local --config wrangler.jsonc",
+    "cf-typegen": "wrangler types",
+    "deploy": "wrangler deploy --local --config wrangler.jsonc"
   },
   "devDependencies": {
     "typescript": "^5.5.2",
