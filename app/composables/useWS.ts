@@ -26,7 +26,7 @@ export function useWS(config: WebSocketConfig) {
   const messages = ref<ChatMessage[]>([]);
   const status = ref('DISCONNECTED');
   const isConnected = ref(false);
-  const currentUser = ref();
+  const currentUser = ref<User>();
 
   if (!config.decisionId || !config.verticalKey) {
     console.log('WebSocket not initialized - missing required values:', {
@@ -56,7 +56,7 @@ export function useWS(config: WebSocketConfig) {
 
   async function connect() {
     try {
-      // Get auth token and user info
+      // Get auth token
       const response = await $fetch('/api/ws/validate', {
         method: 'POST',
         body: {
@@ -66,21 +66,23 @@ export function useWS(config: WebSocketConfig) {
       });
 
       if (!response.success) throw new Error('Token fetch failed');
+      authToken = response.token;
       currentUser.value = response.user;
 
-      // Construct the first protocol as room:userId base64
-      const roomUser = `${config.decisionId}:${currentUser.value.email}`;
-      const protocol = btoa(roomUser).replace(/=/g, '');
+      // Create protocol
+      const connectionData = `${config.decisionId}:${config.verticalKey}:${currentUser.value.email}:${authToken}`;
+      const protocol = btoa(connectionData);
 
+      // connect to Durable Object directly
       wsInstance = useWebSocket(response.websocketUrl, {
-        protocols: [protocol], // first protocol must be room:userId
+        protocols: [protocol.replaceAll('=', ''), 'chat'],
         autoReconnect: config.autoReconnect ?? true,
         onConnected: () => {
           console.log('WebSocket connected');
           isConnected.value = true;
           status.value = 'CONNECTED';
 
-          // Send name immediately
+          // Send user name
           wsInstance.send(
             JSON.stringify({
               type: 'name',
@@ -91,48 +93,61 @@ export function useWS(config: WebSocketConfig) {
             })
           );
 
-          config.onConnected?.();
+          if (config.onConnected) {
+            config.onConnected();
+          }
         },
         onDisconnected: () => {
           console.log('WebSocket disconnected');
           isConnected.value = false;
           status.value = 'DISCONNECTED';
         },
-        onMessage: (_ws, event) => {
+        onMessage: (_ws: unknown, event: unknown) => {
           try {
             const data = JSON.parse(event.data);
+
             if (data.type === 'chat') {
               messages.value.push({
-                sender: { email: data.userId, name: data.userName },
+                sender: { email: data.userEmail, name: data.userName },
                 content: data.text,
                 timestamp: data.time,
-                decisionId: config.decisionId,
-                verticalKey: config.verticalKey
+                decisionId: data.decisionId,
+                verticalKey: data.verticalKey
               });
             }
-            config.onMessage?.(data);
-          } catch (err) {
-            console.error('Error parsing WS message:', err);
+
+            if (config.onMessage) {
+              config.onMessage(data);
+            }
+          } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
           }
         },
-        onError: (error) => {
+        onError: (error: unknown) => {
           console.error('WebSocket error:', error);
           status.value = 'ERROR';
-          config.onError?.(error);
+          if (config.onError) {
+            config.onError(error);
+          }
         }
       });
 
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 500));
       wsInstance.open();
     } catch (error) {
       console.error('Failed to connect:', error);
       status.value = 'ERROR';
-      config.onError?.(error);
+      if (config.onError) {
+        config.onError(error);
+      }
     }
   }
 
   function sendChatMsg(content: string) {
-    if (!isConnected.value || !wsInstance) return;
+    if (!isConnected.value || !wsInstance) {
+      console.warn('Cannot send message - WebSocket not connected');
+      return;
+    }
 
     wsInstance.send(
       JSON.stringify({
@@ -141,7 +156,6 @@ export function useWS(config: WebSocketConfig) {
       })
     );
   }
-
 
   function sendMessage(type: string, payload: Record<string, unknown>) {
     if (!isConnected.value || !wsInstance) {

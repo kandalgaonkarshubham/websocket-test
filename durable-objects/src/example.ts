@@ -1,66 +1,185 @@
-import { DurableObject } from "cloudflare:workers";
+import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
 
-/**
- * Welcome to Cloudflare Workers! This is your first Durable Objects application.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your Durable Object in action
- * - Run `npm run deploy` to publish your application
- *
- * Bind resources to your worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/durable-objects
- */
+const MAX_MESSAGE_SIZE = 1024 * 10; // 10KB
 
-/** A Durable Object's behavior is defined in an exported Javascript class */
-export class MyDurableObject extends DurableObject<Env> {
-	/**
-	 * The constructor is invoked once upon creation of the Durable Object, i.e. the first call to
-	 * 	`DurableObjectStub::get` for a given identifier (no-op constructors can be omitted)
-	 *
-	 * @param ctx - The interface for interacting with Durable Object state
-	 * @param env - The interface to reference bindings declared in wrangler.jsonc
-	 */
-	constructor(ctx: DurableObjectState, env: Env) {
-		super(ctx, env);
-	}
-
-	/**
-	 * The Durable Object exposes an RPC method sayHello which will be invoked when when a Durable
-	 *  Object instance receives a request from a Worker via the same method invocation on the stub
-	 *
-	 * @param name - The name provided to a Durable Object instance from a Worker
-	 * @returns The greeting to be sent back to the Worker
-	 */
-	async sayHello(name: string): Promise<string> {
-		return `Hello, ${name}!`;
-	}
+interface ChatMessage {
+  type: "chat";
+  text: string;
 }
 
-export default {
-	/**
-	 * This is the standard fetch handler for a Cloudflare Worker
-	 *
-	 * @param request - The request submitted to the Worker from the client
-	 * @param env - The interface to reference bindings declared in wrangler.jsonc
-	 * @param ctx - The execution context of the Worker
-	 * @returns The response to be sent back to the client
-	 */
-	async fetch(request, env, ctx): Promise<Response> {
-		// Create a `DurableObjectId` for an instance of the `MyDurableObject`
-		// class named "foo". Requests from all Workers to the instance named
-		// "foo" will go to a single globally unique Durable Object instance.
-		const id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName("foo");
+interface NameUpdateMessage {
+  type: "name";
+  name: string;
+}
 
-		// Create a stub to open a communication channel with the Durable
-		// Object instance.
-		const stub = env.MY_DURABLE_OBJECT.get(id);
+type WebSocketMessage = ChatMessage | NameUpdateMessage;
 
-		// Call the `sayHello()` RPC method on the stub to invoke the method on
-		// the remote Durable Object instance
-		const greeting = await stub.sayHello("world");
+// NOTE: in a real-world scenario, the token should instead be JWT or similar
+// from which we could extract and validate room/user/topic and such
+// or, the info can even be stored inside a KV
+function extractRoomAndUser(request: Request): {
+  room: string;
+  userId: string;
+} {
+  const protocolHeader = request.headers.get("sec-websocket-protocol");
+  if (!protocolHeader) {
+    throw new Error("Missing sec-websocket-protocol header");
+  }
+  const [encoded] = protocolHeader.split(",").map((x) => x.trim());
+  if (!encoded) {
+    throw new Error("Invalid sec-websocket-protocol format");
+  }
+  const decoded = atob(encoded);
+  // const decoded = new TextDecoder().decode(
+  //   Uint8Array.from(atob(encoded), c => c.charCodeAt(0))
+  // );
+  const [room, userId] = decoded.split(":");
+  if (!room || !userId) {
+    throw new Error("Room and User ID must be separated by a colon");
+  }
+  return { room, userId };
+}
 
-		return new Response(greeting);
-	},
-} satisfies ExportedHandler<Env>;
+export default class Worker extends WorkerEntrypoint {
+  async publish(room: string, data: any) {
+    const binding = (this.env as any)
+      .WEBSOCKETS as DurableObjectNamespace<WebSockets>;
+    const stub = binding.get(binding.idFromName(room)); // infer durable object instance from room name
+    await stub.publish(room, data);
+    return new Response(null);
+  }
+  override async fetch(request: Request) {
+    const binding = (this.env as any)
+      .WEBSOCKETS as DurableObjectNamespace<WebSockets>;
+    try {
+      const { room } = extractRoomAndUser(request);
+      const stub = binding.get(binding.idFromName(room)); // infer durable object instance from room name
+      return stub.fetch(request);
+    } catch (err) {
+      console.error("Error in worker fetch:", err);
+      return new Response(null, { status: 400 });
+    }
+  }
+}
+
+export class WebSockets extends DurableObject {
+  async publish(room: string, data: any) {
+    try {
+      const websockets = this.ctx.getWebSockets();
+      if (websockets.length < 1) {
+        return;
+      }
+      for (const ws of websockets) {
+        const state = ws.deserializeAttachment() || {};
+        if (state.room === room) {
+          ws.send(JSON.stringify(data));
+        }
+      }
+      return null;
+    } catch (err) {
+      console.error("publish err", err);
+    }
+  }
+  override async fetch(request: Request): Promise<Response> {
+    if (request.headers.get("upgrade") === "websocket") {
+      try {
+        const { room, userId } = extractRoomAndUser(request);
+        const protocols =
+          request.headers
+            .get("sec-websocket-protocol")
+            ?.split(",")
+            .map((x) => x.trim()) || [];
+        protocols.shift(); // remove the room:userId from protocols
+
+        const webSocketPair = new WebSocketPair();
+        const [client, server] = Object.values(webSocketPair);
+        if (server) {
+          server.serializeAttachment({
+            room,
+            userId,
+          });
+          this.ctx.acceptWebSocket(server, [room, userId]);
+        }
+
+        const res = new Response(null, { status: 101, webSocket: client });
+        if (protocols.length > 0) {
+          res.headers.set("sec-websocket-protocol", protocols[0] as string);
+        }
+        return res;
+      } catch (err) {
+        console.error("Error in websocket fetch:", err);
+        return new Response(null, { status: 400 });
+      }
+    }
+    return new Response(null);
+  }
+  override async webSocketMessage(
+    ws: WebSocket,
+    message: ArrayBuffer | string,
+  ) {
+    const { room, userId } = ws.deserializeAttachment();
+
+    // Validate message type and size
+    if (typeof message !== "string") {
+      console.error(`Invalid message type: ${typeof message}`);
+      ws.close(1003, "Invalid message type");
+      return;
+    }
+    if (message.length > MAX_MESSAGE_SIZE) {
+      console.error(`Message too large: ${message.length} bytes`);
+      ws.close(1009, "Message too large");
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(message) as WebSocketMessage;
+
+      if (parsed.type === "chat") {
+        if (
+          typeof parsed.text !== "string" ||
+          parsed.text.trim().length === 0
+        ) {
+          throw new Error("Invalid chat message");
+        }
+        const userName =
+          (await this.ctx.storage.get<string>(`name:${userId}`)) || userId;
+        this.publish(room, {
+          type: "chat",
+          userId,
+          userName,
+          text: parsed.text,
+          time: new Date().toISOString(),
+        });
+      } else if (parsed.type === "name") {
+        if (
+          typeof parsed.name !== "string" ||
+          parsed.name.trim().length === 0
+        ) {
+          throw new Error("Invalid name");
+        }
+        await this.ctx.storage.put(`name:${userId}`, parsed.name.trim());
+        this.publish(room, {
+          type: "name",
+          userId,
+          name: parsed.name.trim(),
+          time: new Date().toISOString(),
+        });
+      } else {
+        throw new Error("Unknown message type");
+      }
+    } catch (err) {
+      console.error("Message processing error:", err);
+      ws.close(1003, "Invalid message format");
+    }
+  }
+  override async webSocketClose(
+    ws: WebSocket,
+    code: number,
+    reason: string,
+    _wasClean: boolean,
+  ) {
+    const { userId } = ws.deserializeAttachment();
+    await this.ctx.storage.delete(`name:${userId}`);
+    ws.close(code, reason);
+  }
+}
