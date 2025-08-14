@@ -25,3 +25,7 @@ logs
 
 /websockets/.wrangler/
 /websockets/pnpm-lock.yaml
+
+.sst
+
+.nuxflare

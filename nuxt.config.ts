@@ -17,6 +17,12 @@ export default defineNuxtConfig({
     },
   },
 
+  runtimeConfig: {
+    public: {
+      websocketsUrl: "ws://localhost:8787",
+    },
+  },
+
   modules: ['@vueuse/nuxt', '@nuxt/ui'],
 
   css: ['~/assets/css/main.css'],
