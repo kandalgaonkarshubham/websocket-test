@@ -58,6 +58,10 @@ export function useWS(config: WebSocketConfig) {
   let wsInstance: unknown = null;
 
   async function connect() {
+    if (isConnected.value || loading.value) {
+      console.log('WebSocket already connected or connecting');
+      return;
+    }
     loading.value = true;
     try {
       // Get auth token

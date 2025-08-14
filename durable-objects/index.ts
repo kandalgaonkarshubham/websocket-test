@@ -207,7 +207,7 @@ const ws = crossws({
 
       } catch (error) {
         console.error('[ws] Message processing error:', error);
-        peer.close(1003, 'Invalid message format');
+        // peer.close(1003, 'Invalid message format');
       }
     },
 
