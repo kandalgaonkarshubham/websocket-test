@@ -249,7 +249,7 @@ export default {
   }
 };
 
-// Durable Object class - much simpler with crossws!
+// Durable Object class
 export class WEBSOCKETS extends DurableObject {
   env: Env;
 
