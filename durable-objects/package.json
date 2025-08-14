@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler deploy --local --config wrangler.jsonc",
     "start": "wrangler dev --local --config wrangler.jsonc",
     "dev": "WRANGLER_LOG=debug wrangler dev --local --config wrangler.jsonc",
     "cf-typegen": "wrangler types"
