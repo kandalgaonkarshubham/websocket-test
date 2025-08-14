@@ -23,9 +23,5 @@ logs
 .env.*
 !.env.example
 
-/websockets/.wrangler/
-/websockets/pnpm-lock.yaml
-
-.sst
-
-.nuxflare
+/durable-objects/.wrangler/
+/durable-objects/pnpm-lock.yaml
