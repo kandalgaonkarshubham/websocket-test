@@ -8,7 +8,7 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "dev:ws": "cd websockets && pnpm run start"
+    "dev:ws": "cd durable-objects && pnpm run start"
   },
   "dependencies": {
     "@nuxt/ui": "^3.3.0",
