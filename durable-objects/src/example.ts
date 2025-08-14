@@ -1,3 +1,5 @@
+// TUTORIAL BLOG CODE
+
 import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
 
 const MAX_MESSAGE_SIZE = 1024 * 10; // 10KB
