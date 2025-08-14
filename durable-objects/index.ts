@@ -88,6 +88,9 @@ async function extractConnectionData(
   return { room, userEmail, decisionId, verticalKey };
 }
 
+// userEmail -> peer
+const activePeers = new Map<string, any>();
+
 // Create crossws instance
 const ws = crossws({
   bindingName: "WEBSOCKETS", // Your durable object binding name
@@ -104,6 +107,16 @@ const ws = crossws({
 
         // Store connection data in peer context
         peer.ctx = { room, userEmail, decisionId, verticalKey };
+
+        // Check if there’s an existing connection for this user
+        const existing = activePeers.get(userEmail);
+        if (existing && existing.readyState === WebSocket.OPEN) {
+          console.log(`[ws] Closing old connection for ${userEmail}`);
+          existing.close(4000, 'Another connection opened');
+        }
+
+        // Store the new connection
+        activePeers.set(userEmail, peer);
 
         // Subscribe to the room for pub/sub
         peer.subscribe(room);
@@ -163,7 +176,7 @@ const ws = crossws({
           console.log('[ws] Publishing chat message:', chatData);
 
           // Publish to all subscribers of this room
-          await peer.publish(room, chatData);
+          peer.publish(room, chatData);
 
         } else if (parsed.type === 'name') {
           if (typeof parsed.name !== 'string' || parsed.name.trim().length === 0) {
@@ -186,7 +199,7 @@ const ws = crossws({
           console.log('[ws] Publishing name update:', nameData);
 
           // Publish name update to room
-          await peer.publish(room, nameData);
+          peer.publish(room, nameData);
 
         } else {
           throw new Error('Unknown message type');
@@ -203,6 +216,9 @@ const ws = crossws({
         const ctx = peer.ctx as WebSocketData;
         if (ctx) {
           console.log(`[ws] User ${ctx.userEmail} left room ${ctx.room}`);
+
+          // Remove from active peers map
+          activePeers.delete(ctx.userEmail);
 
           // Clean up stored name data
           await peer.storage?.delete(`name:${ctx.userEmail}`);
