@@ -22,7 +22,7 @@ pnpm run dev:ws
 
 ### 1. Root Worker
 
-Deploy the root Worker (Nuxt) project from the root folder:
+Deploy the root Worker (Nuxt) from the root folder:
 
 ```bash
 wrangler deploy
@@ -30,7 +30,7 @@ wrangler deploy
 
 ### 2. Durable Objects Worker
 
-Deploy the durable-objects Worker project:
+Deploy the durable-objects Worker:
 
 ```bash
 cd durable-objects
