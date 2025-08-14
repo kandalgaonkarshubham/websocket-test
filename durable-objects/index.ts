@@ -150,6 +150,7 @@ const ws = crossws({
           console.log('[ws] Got username:', userName);
 
           const chatData = {
+            id: crypto.randomUUID(),
             type: 'chat',
             userEmail,
             userName,

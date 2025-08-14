@@ -25,6 +25,7 @@ export type WebSocketConfig = {
 
 export function useWS(config: WebSocketConfig) {
   const loading = ref(false);
+  const seenMessageIds = new Set<string>();
   const messages = ref<ChatMessage[]>([]);
   const status = ref('DISCONNECTED');
   const isConnected = ref(false);
@@ -109,15 +110,19 @@ export function useWS(config: WebSocketConfig) {
         onMessage: (_ws: unknown, event: unknown) => {
           try {
             const data = JSON.parse(event.data);
+            console.log(event, data);
 
             if (data.type === 'chat') {
-              messages.value.push({
-                sender: { email: data.userEmail, name: data.userName },
-                content: data.text,
-                timestamp: data.time,
-                decisionId: data.decisionId,
-                verticalKey: data.verticalKey
-              });
+              if (!seenMessageIds.has(data.id)) {
+                seenMessageIds.add(data.id);
+                messages.value.push({
+                  sender: { email: data.userEmail, name: data.userName },
+                  content: data.text,
+                  timestamp: data.time,
+                  decisionId: data.decisionId,
+                  verticalKey: data.verticalKey
+                });
+              }
             }
 
             if (config.onMessage) {
