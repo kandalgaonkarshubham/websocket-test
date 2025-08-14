@@ -3,12 +3,13 @@ export const useUser = () => {
 
   const fetchUser = async () => {
     try {
+      const timestamp = Date.now();
       const response = {
-        id: 1,
-        displayName: 'test User',
+        id: timestamp,
+        displayName: `test User ${timestamp}`,
         firstName: 'test',
         lastName: 'User',
-        email: 'testUser@gmail.com'
+        email: `testUser${timestamp}@gmail.com`
       };
       user.value = response;
       return response;

@@ -77,6 +77,7 @@ const props = defineProps({
 const { loading, messages, sendChat, status, connect, disconnect } = useWS({
   decisionId: props.did,
   verticalKey: props.verticalKey,
+  currentUser: props.currentUser,
   autoReconnect: true,
   onConnected: () => {
     console.log(`Connected to decision ${props.did} chat room`);

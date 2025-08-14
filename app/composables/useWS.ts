@@ -16,6 +16,7 @@ export type WebSocketUser = {
 export type WebSocketConfig = {
   decisionId: string;
   verticalKey: string;
+  currentUser: object;
   autoReconnect?: boolean;
   onConnected?: () => void;
   onError?: (error: unknown) => void;
@@ -27,7 +28,7 @@ export function useWS(config: WebSocketConfig) {
   const messages = ref<ChatMessage[]>([]);
   const status = ref('DISCONNECTED');
   const isConnected = ref(false);
-  const currentUser = ref<User>();
+  const currentUser = ref<User>(config.currentUser);
 
   if (!config.decisionId || !config.verticalKey) {
     console.log('WebSocket not initialized - missing required values:', {
@@ -63,13 +64,14 @@ export function useWS(config: WebSocketConfig) {
         method: 'POST',
         body: {
           decisionId: config.decisionId,
-          verticalKey: config.verticalKey
+          verticalKey: config.verticalKey,
+          email: currentUser.value.email
         }
       });
 
       if (!response.success) throw new Error('Token fetch failed');
       authToken = response.token;
-      currentUser.value = response.user;
+      // currentUser.value = response.user;
 
       // Create protocol
       const connectionData = `${config.decisionId}:${config.verticalKey}:${currentUser.value.email}:${authToken}`;
