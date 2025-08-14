@@ -5,7 +5,7 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "durable-objects",
-	"main": "src/index.ts",
+	"main": "src/ws1.ts",
 	"compatibility_date": "2025-08-13",
 	"migrations": [
 		{
