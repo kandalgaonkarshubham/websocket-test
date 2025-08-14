@@ -36,3 +36,10 @@ Deploy the root Worker project from the root folder:
 cd durable-objects
 wrangler deploy --config wrangler.jsonc
 ```
+---
+
+## Deployments
+
+
+- Worker (Nuxt): https://websocket-test.shubham-ad0.workers.dev/
+- Worker (Websockets): https://durable-objects.shubham-ad0.workers.dev/ wss://durable-objects.shubham-ad0.workers.dev/
