@@ -96,11 +96,11 @@ const ws = crossws({
     async open(peer) {
       try {
         const request = peer.request;
-        const env = { NUXT_WEBSOCKET_SECRET: '16901cff6ab96f24c8e903be030f84e9247214b1d814938b853bd22aa1ba6c9007a6feda478354561ed17523a379e5303f794f1d5baa2b0d7f227761077c1aee' }as Env;
+        const WEBSOCKET_SECRET = peer.request.headers.get('cf-ws-secret')!;
 
         // Extract connection data from the request
         const { room, userEmail, decisionId, verticalKey } =
-          await extractConnectionData(request, env.NUXT_WEBSOCKET_SECRET);
+          await extractConnectionData(request, WEBSOCKET_SECRET);
 
         // Store connection data in peer context
         peer.ctx = { room, userEmail, decisionId, verticalKey };
@@ -232,9 +232,13 @@ export default {
     // Handle WebSocket upgrade requests
     if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
       try {
-        // Verify the connection data before upgrading
-        await extractConnectionData(request, env.NUXT_WEBSOCKET_SECRET);
-        return ws.handleUpgrade(request, env, ctx);
+        const envEmbeddedReq = new Request(request, {
+          headers: {
+            ...Object.fromEntries(request.headers),
+            'cf-ws-secret': env.NUXT_WEBSOCKET_SECRET,
+          }
+        });
+        return ws.handleUpgrade(envEmbeddedReq, env, ctx);
       } catch (error) {
         console.error('Error in worker fetch:', error);
         return new Response(null, { status: 400 });
@@ -247,8 +251,11 @@ export default {
 
 // Durable Object class - much simpler with crossws!
 export class WEBSOCKETS extends DurableObject {
+  env: Env;
+
   constructor(state: DurableObjectState, env: Env) {
     super(state, env);
+    this.env = env;
     ws.handleDurableInit(this, state, env);
   }
 
@@ -258,6 +265,7 @@ export class WEBSOCKETS extends DurableObject {
 
   webSocketMessage(client: WebSocket, message: ArrayBuffer | string) {
     console.log('[DO] webSocketMessage called:', typeof message, message);
+    client.ctx = { ...client.ctx, env: this.env };
     return ws.handleDurableMessage(this, client, message);
   }
 
