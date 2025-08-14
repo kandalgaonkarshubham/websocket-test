@@ -56,7 +56,7 @@ export function useWS(config: WebSocketConfig) {
 
   async function connect() {
     try {
-      // Get auth token
+      // Get auth token and user info
       const response = await $fetch('/api/ws/validate', {
         method: 'POST',
         body: {
@@ -66,23 +66,21 @@ export function useWS(config: WebSocketConfig) {
       });
 
       if (!response.success) throw new Error('Token fetch failed');
-      authToken = response.token;
       currentUser.value = response.user;
 
-      // Create protocol
-      const connectionData = `${config.decisionId}:${config.verticalKey}:${currentUser.value.email}:${authToken}`;
-      const protocol = btoa(connectionData);
+      // Construct the first protocol as room:userId base64
+      const roomUser = `${config.decisionId}:${currentUser.value.email}`;
+      const protocol = btoa(roomUser).replace(/=/g, '');
 
-      // connect to Durable Object directly
       wsInstance = useWebSocket(response.websocketUrl, {
-        protocols: [protocol.replaceAll('=', ''), 'chat'],
+        protocols: [protocol], // first protocol must be room:userId
         autoReconnect: config.autoReconnect ?? true,
         onConnected: () => {
           console.log('WebSocket connected');
           isConnected.value = true;
           status.value = 'CONNECTED';
 
-          // Send user name
+          // Send name immediately
           wsInstance.send(
             JSON.stringify({
               type: 'name',
@@ -93,61 +91,48 @@ export function useWS(config: WebSocketConfig) {
             })
           );
 
-          if (config.onConnected) {
-            config.onConnected();
-          }
+          config.onConnected?.();
         },
         onDisconnected: () => {
           console.log('WebSocket disconnected');
           isConnected.value = false;
           status.value = 'DISCONNECTED';
         },
-        onMessage: (_ws: unknown, event: unknown) => {
+        onMessage: (_ws, event) => {
           try {
             const data = JSON.parse(event.data);
-
             if (data.type === 'chat') {
               messages.value.push({
-                sender: { email: data.userEmail, name: data.userName },
+                sender: { email: data.userId, name: data.userName },
                 content: data.text,
                 timestamp: data.time,
-                decisionId: data.decisionId,
-                verticalKey: data.verticalKey
+                decisionId: config.decisionId,
+                verticalKey: config.verticalKey
               });
             }
-
-            if (config.onMessage) {
-              config.onMessage(data);
-            }
-          } catch (error) {
-            console.error('Error parsing WebSocket message:', error);
+            config.onMessage?.(data);
+          } catch (err) {
+            console.error('Error parsing WS message:', err);
           }
         },
-        onError: (error: unknown) => {
+        onError: (error) => {
           console.error('WebSocket error:', error);
           status.value = 'ERROR';
-          if (config.onError) {
-            config.onError(error);
-          }
+          config.onError?.(error);
         }
       });
 
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 300));
       wsInstance.open();
     } catch (error) {
       console.error('Failed to connect:', error);
       status.value = 'ERROR';
-      if (config.onError) {
-        config.onError(error);
-      }
+      config.onError?.(error);
     }
   }
 
   function sendChatMsg(content: string) {
-    if (!isConnected.value || !wsInstance) {
-      console.warn('Cannot send message - WebSocket not connected');
-      return;
-    }
+    if (!isConnected.value || !wsInstance) return;
 
     wsInstance.send(
       JSON.stringify({
@@ -156,6 +141,7 @@ export function useWS(config: WebSocketConfig) {
       })
     );
   }
+
 
   function sendMessage(type: string, payload: Record<string, unknown>) {
     if (!isConnected.value || !wsInstance) {
