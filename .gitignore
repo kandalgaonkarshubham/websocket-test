@@ -24,4 +24,4 @@ logs
 !.env.example
 
 /durable-objects/.wrangler/
-/durable-objects/pnpm-lock.yaml
+/durable-objects/worker-configuration.d.ts
