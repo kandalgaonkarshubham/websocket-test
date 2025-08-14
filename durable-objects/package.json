@@ -1,0 +1,16 @@
+{
+  "name": "durable-objects",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "pnpm i && pnpm run dev",
+    "dev": "wrangler dev --local --config wrangler.jsonc",
+    "dev:log": "WRANGLER_LOG=debug wrangler dev --local --config wrangler.jsonc",
+    "cf-typegen": "wrangler types",
+    "deploy": "wrangler deploy --local --config wrangler.jsonc"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.2",
+    "wrangler": "^4.29.1"
+  }
+}

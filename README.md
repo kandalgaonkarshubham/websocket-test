@@ -1,75 +1,38 @@
-# Nuxt Minimal Starter
+# Nuxt Minimal Starter with WebSocket + Durable Objects Project
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+This repository contains two separate Cloudflare Worker projects:
 
-## Setup
+1. **Root Worker (`websocket-test`)** – Main Worker(Nuxt) project.
+2. **Durable Objects Worker (`durable-objects`)** – Handles WebSocket connections using Durable Objects.
 
-Make sure to install dependencies:
+---
 
-```bash
-# npm
-npm install
+## Local Development
 
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
-```
-
-## Development Server
-
-Start the development server on `http://localhost:3000`:
+Run:
 
 ```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
+pnpm run dev:ws
 ```
+  In a seperate terminal to start the websocket server on port:8787
 
-## Production
+---
 
-Build the application for production:
+## Deployment (Github Actions)
+
+### 1. Root Worker
+
+Deploy the root Worker project from the root folder:
 
 ```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
+wrangler deploy
 ```
 
-Locally preview production build:
+### 2. Durable Objects Worker
+
+Deploy the root Worker project from the root folder:
 
 ```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
+cd durable-objects
+wrangler deploy --config wrangler.jsonc
 ```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.

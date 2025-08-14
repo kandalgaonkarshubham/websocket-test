@@ -1,4 +1,3 @@
-/// <reference types="@cloudflare/workers-types" />
 import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
 
 const MAX_MESSAGE_SIZE = 1024 * 10; // 10KB
@@ -98,8 +97,8 @@ async function extractConnectionData(
   return { room, userEmail, decisionId, verticalKey };
 }
 
-export default class Worker extends WorkerEntrypoint {
-  override async fetch(
+export default {
+  async fetch(
     request: Request,
     env: Env,
     _ctx: ExecutionContext
@@ -123,7 +122,7 @@ export default class Worker extends WorkerEntrypoint {
   }
 };
 
-export class WebSockets extends DurableObject {
+export class WebSockets implements DurableObject {
   private state: DurableObjectState;
   private env: Env;
   private ctx: ExecutionContext;
