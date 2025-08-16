@@ -60,6 +60,8 @@ async function extractConnectionData(request: Request, secret: string) {
 }
 
 const ws = crossws({
+  bindingName: "WEBSOCKETS",
+  instanceName: "crossws",
   hooks: {
     async open(peer) {
       try {
@@ -162,11 +164,13 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
       try {
-        const envEmbeddedReq = new Request(request, {
-          headers: {
-            ...Object.fromEntries(request.headers),
-            'cf-ws-secret': env.NUXT_WEBSOCKET_SECRET,
-          }
+        const newHeaders = new Headers(request.headers);
+        newHeaders.set('cf-ws-secret', env.NUXT_WEBSOCKET_SECRET);
+
+        const envEmbeddedReq = new Request(request.url, {
+          method: request.method,
+          headers: newHeaders,
+          body: request.body,
         });
         return ws.handleUpgrade(envEmbeddedReq, env, ctx);
       } catch (error) {
