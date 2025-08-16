@@ -140,8 +140,6 @@ export function useWS(config: WebSocketConfig = {}) {
         }
       });
 
-      // Small delay then open connection
-      await new Promise((r) => setTimeout(r, 500));
       wsInstance.open();
     } catch (error) {
       console.error('Failed to connect:', error);

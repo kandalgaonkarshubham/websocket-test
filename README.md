@@ -39,9 +39,3 @@ cd durable-objects
 wrangler deploy --config wrangler.toml
 ```
 ---
-
-## Deployments
-
-
-- Worker (Nuxt): https://websocket-test.shubham-ad0.workers.dev/
-- Worker (Websockets): https://durable-objects.shubham-ad0.workers.dev/ wss://durable-objects.shubham-ad0.workers.dev/

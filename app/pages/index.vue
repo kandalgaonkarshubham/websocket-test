@@ -9,7 +9,7 @@
     >
       <template #body>
         <div class="flex flex-col gap-4">
-          <UFormField label="Name">
+          <UFormField label="UserName">
             <UInput
               v-model="userNameInput"
               placeholder="Enter your name"
@@ -17,7 +17,7 @@
               autofocus
             />
           </UFormField>
-          <UFormField label="Decision Id">
+          <UFormField label="Decision (Room) Id">
             <UInput
               v-model="chatRoomInput"
               :default-value="1"
