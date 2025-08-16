@@ -46,7 +46,6 @@
       </div>
     </div>
 
-    <!-- Connection Status Messages -->
     <div v-if="status !== 'CONNECTED'" class="text-center py-4">
       <div class="text-sm text-gray-500">
         <div v-if="status === 'CONNECTING'" class="flex items-center justify-center gap-2">
@@ -79,7 +78,6 @@
       </div>
     </div>
 
-    <!-- Empty State -->
     <div v-else-if="messages.length === 0" class="text-center py-8">
       <div class="text-gray-500 text-sm">
         <p>No messages yet</p>
@@ -129,7 +127,6 @@ function scrollToBottom() {
   }
 }
 
-// Auto-scroll when new messages arrive
 watch(() => props.messages.length, () => {
   scrollToBottom();
 });

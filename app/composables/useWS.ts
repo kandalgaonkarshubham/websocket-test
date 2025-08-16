@@ -202,7 +202,6 @@ export function useWS(config: WebSocketConfig = {}) {
     messages: readonly(messages),
     status: readonly(status),
     isConnected: readonly(isConnected),
-    currentUser: readonly(currentUser),
     loading: readonly(loading),
 
     // Actions

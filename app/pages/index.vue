@@ -45,10 +45,9 @@
       >
         <template #header>
           <div class="flex items-center justify-between">
-            <h1 class="text-xl font-bold">Chat</h1>
-            <div v-if="did && verticalKey" class="text-sm text-gray-500">
-              Room: {{ did + '__' + verticalKey }}
-            </div>
+            <h1 class="text-xl font-bold">
+              <span v-if="did && verticalKey">Room: {{ did + '__' + verticalKey }}</span>
+            </h1>
             <div class="flex items-center gap-2">
               <div class="flex items-center gap-1">
                 <div
@@ -138,7 +137,6 @@ const {
   messages,
   status,
   isConnected,
-  currentUser,
   loading,
   initialize,
   connect,
@@ -191,9 +189,7 @@ async function joinChatRoom() {
   // Initialize WebSocket with connection parameters
   const initialized = initialize(did.value, verticalKey, user.value);
   if (initialized) {
-    // Clear any previous messages
     clearMessages();
-    // Connect to WebSocket
     await connect();
   }
 }
