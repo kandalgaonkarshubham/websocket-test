@@ -64,10 +64,10 @@ const ws = crossws({
     async open(peer) {
       try {
         const req = peer.request as Request;
-        const env = peer.env as Env;
+        const WEBSOCKET_SECRET = peer.request.headers.get('cf-ws-secret')!;
 
         const { room, userEmail, decisionId, verticalKey } =
-          await extractConnectionData(req, env.NUXT_WEBSOCKET_SECRET);
+          await extractConnectionData(req, WEBSOCKET_SECRET);
 
         // attach metadata to peer
         peer.data = { room, userEmail, decisionId, verticalKey };
@@ -159,12 +159,24 @@ const ws = crossws({
 });
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    if (request.headers.get("upgrade") === "websocket") {
-      return ws.handleUpgrade(request, env, ctx);
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
+      try {
+        const envEmbeddedReq = new Request(request, {
+          headers: {
+            ...Object.fromEntries(request.headers),
+            'cf-ws-secret': env.NUXT_WEBSOCKET_SECRET,
+          }
+        });
+        return ws.handleUpgrade(envEmbeddedReq, env, ctx);
+      } catch (error) {
+        console.error('Error in worker fetch:', error);
+        return new Response(null, { status: 400 });
+      }
     }
-    return new Response("Expected WebSocket", { status: 400 });
-  },
+
+    return new Response('Expected WebSocket', { status: 400 });
+  }
 };
 
 export class WEBSOCKETS extends DurableObject {
