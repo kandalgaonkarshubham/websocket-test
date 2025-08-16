@@ -88,6 +88,9 @@ async function extractConnectionData(
   return { room, userEmail, decisionId, verticalKey };
 }
 
+// Global storage for connection data by peer ID
+const peerConnectionData = new Map<string, WebSocketData>();
+
 // Global storage for connection data and active peers
 let globalEnv: Env;
 let globalDurableObject: any;
@@ -102,18 +105,23 @@ const ws = crossws({
       try {
         const secret = globalEnv?.NUXT_WEBSOCKET_SECRET;
         if (!secret) {
+          console.error('[crossws] Missing websocket secret in globalEnv:', !!globalEnv);
           throw new Error('Missing websocket secret');
         }
 
         const { room, userEmail, decisionId, verticalKey } =
           await extractConnectionData(request, secret);
 
-        console.log(`[crossws] Authentication successful for: ${userEmail}`);
+        console.log(`[crossws] Authentication successful for: ${userEmail}, room: ${room}`);
 
-        // Return namespace (room) so crossws can manage peers properly
+        // Generate a temporary ID to link upgrade to open
+        const tempId = crypto.randomUUID();
+        peerConnectionData.set(tempId, { room, userEmail, decisionId, verticalKey });
+
+        // Return namespace and the tempId in context
         return {
           namespace: room,
-          context: { room, userEmail, decisionId, verticalKey }
+          context: { tempId }
         };
 
       } catch (error) {
@@ -126,12 +134,34 @@ const ws = crossws({
 
     async open(peer) {
       console.log("[crossws] WebSocket opened", peer.id);
+      console.log("[crossws] Peer context:", peer.context);
 
       try {
-        // Get connection data from context (set in upgrade hook)
-        const connectionData = peer.context;
-        if (!connectionData) {
-          throw new Error('No connection data in context');
+        // Get connection data using tempId
+        const tempId = peer.context?.tempId;
+        let connectionData = null;
+
+        if (tempId) {
+          connectionData = peerConnectionData.get(tempId);
+          peerConnectionData.delete(tempId); // Clean up temp storage
+        }
+
+        // Fallback: try to extract from peer.request if available
+        if (!connectionData && peer.request) {
+          console.log('[crossws] Fallback: extracting from peer.request');
+          const secret = globalEnv?.NUXT_WEBSOCKET_SECRET;
+          if (secret) {
+            try {
+              connectionData = await extractConnectionData(peer.request, secret);
+            } catch (e) {
+              console.log('[crossws] Fallback extraction failed:', e);
+            }
+          }
+        }
+
+        if (!connectionData || !connectionData.room || !connectionData.userEmail) {
+          console.error('[crossws] Invalid connection data:', connectionData);
+          throw new Error('No connection data available');
         }
 
         const { room, userEmail, decisionId, verticalKey } = connectionData;
@@ -139,7 +169,7 @@ const ws = crossws({
         // Store connection data in peer for easy access
         peer.connectionData = { room, userEmail, decisionId, verticalKey };
 
-        // Subscribe to the room (this should work now with proper namespace)
+        // Subscribe to the room
         peer.subscribe(room);
 
         console.log(`[crossws] User ${userEmail} joined room ${room}`);
@@ -284,7 +314,7 @@ const ws = crossws({
 // Main worker export
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    // Store env globally for access in hooks
+    // Store env globally BEFORE handling upgrade
     globalEnv = env;
 
     // Handle WebSocket upgrade requests
