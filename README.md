@@ -1,6 +1,6 @@
 # Nuxt Minimal Starter with WebSocket + Durable Objects Project
 
-## Alternative approach (Unstable): [crossws-branch](https://github.com/kandalgaonkarshubham/websocket-test/tree/crossws)
+## BETTER APPROACH: [crossws-branch](https://github.com/kandalgaonkarshubham/websocket-test/tree/crossws-2)
 
 This repository contains two separate Cloudflare Worker projects:
 
