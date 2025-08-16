@@ -70,13 +70,13 @@ export function useWS(config: WebSocketConfig = {}) {
         method: 'POST',
         body: {
           decisionId: connectionParams.decisionId,
-          verticalKey: connectionParams.verticalKey
+          verticalKey: connectionParams.verticalKey,
+          email: currentUser.value.email
         }
       });
 
       if (!response.success) throw new Error('Token fetch failed');
       authToken = response.token;
-      currentUser.value = response.user;
 
       // Create protocol
       const connectionData = `${connectionParams.decisionId}:${connectionParams.verticalKey}:${currentUser.value.email}:${authToken}`;
@@ -88,7 +88,6 @@ export function useWS(config: WebSocketConfig = {}) {
         autoReconnect: config.autoReconnect ?? false,
         immediate: false, // Don't connect immediately
         onConnected: () => {
-          console.log('WebSocket connected');
           isConnected.value = true;
           status.value = 'CONNECTED';
 
@@ -108,7 +107,6 @@ export function useWS(config: WebSocketConfig = {}) {
           }
         },
         onDisconnected: () => {
-          console.log('WebSocket disconnected');
           isConnected.value = false;
           status.value = 'DISCONNECTED';
         },

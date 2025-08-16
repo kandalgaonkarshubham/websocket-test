@@ -65,11 +65,11 @@
                 v-if="status === 'DISCONNECTED' || status === 'ERROR'"
                 size="sm"
                 variant="outline"
+                label="Reconnect"
+                :disabled="!(did && verticalKey)"
                 :loading="loading"
                 @click="handleConnect"
-              >
-                Reconnect
-              </UButton>
+              />
               <UButton
                 v-else-if="status === 'CONNECTED'"
                 size="sm"
