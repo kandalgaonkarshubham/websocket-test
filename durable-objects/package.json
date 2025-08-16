@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "start": "pnpm i && pnpm run dev",
-    "dev": "wrangler dev --local --config wrangler.jsonc",
-    "dev:log": "WRANGLER_LOG=debug wrangler dev --local --config wrangler.jsonc",
+    "dev": "wrangler dev --local --config wrangler.toml",
+    "dev:log": "WRANGLER_LOG=debug wrangler dev --local --config wrangler.toml",
     "cf-typegen": "wrangler types",
-    "deploy": "wrangler deploy --local --config wrangler.jsonc"
+    "deploy": "wrangler deploy --local --config wrangler.toml"
   },
   "devDependencies": {
     "typescript": "^5.5.2",

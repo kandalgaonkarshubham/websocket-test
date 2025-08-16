@@ -1,6 +1,6 @@
 # Nuxt Minimal Starter with WebSocket + Durable Objects Project
 
-## Alternative approach (Unstable): [crossws-branch](https://github.com/kandalgaonkarshubham/websocket-test/tree/crossws)
+## This branch follows [crossws](https://crossws.h3.dev/adapters/cloudflare) approach
 
 This repository contains two separate Cloudflare Worker projects:
 
@@ -36,7 +36,7 @@ Deploy the durable-objects Worker:
 
 ```bash
 cd durable-objects
-wrangler deploy --config wrangler.jsonc
+wrangler deploy --config wrangler.toml
 ```
 ---
 
