@@ -16,6 +16,7 @@ export type WebSocketUser = {
 export type WebSocketConfig = {
   decisionId: string;
   verticalKey: string;
+  currentUser: object;
   autoReconnect?: boolean;
   onConnected?: () => void;
   onError?: (error: unknown) => void;
@@ -27,7 +28,7 @@ export function useWS(config: WebSocketConfig) {
   const messages = ref<ChatMessage[]>([]);
   const status = ref('DISCONNECTED');
   const isConnected = ref(false);
-  const currentUser = ref<User>();
+  const currentUser = ref(config.currentUser);
 
   if (!config.decisionId || !config.verticalKey) {
     console.log('WebSocket not initialized - missing required values:', {

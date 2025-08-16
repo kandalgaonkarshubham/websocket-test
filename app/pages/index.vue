@@ -1,5 +1,40 @@
 <template>
   <div class="min-h-screen py-4">
+    <UModal
+      title="Welcome to Chat"
+      description="Enter details to join chat."
+      v-model:open="showUserModal"
+      :dismissible="false"
+      :close="false"
+    >
+      <template #body>
+        <div class="flex flex-col gap-4">
+          <UFormField label="Name">
+            <UInput
+              v-model="userNameInput"
+              placeholder="Enter your name"
+              class="w-full"
+              autofocus
+          /></UFormField>
+          <UFormField label="Decicion Id"
+            ><UInput
+              v-model="chatRoomInput"
+              placeholder="Enter chat Decicion Id"
+              class="w-full"
+          /></UFormField>
+        </div>
+      </template>
+      <template #footer>
+        <UButton
+          color="primary"
+          block
+          :disabled="!userNameInput.trim() || !chatRoomInput.trim()"
+          @click="joinChatRoom"
+        >
+          Join Chat
+        </UButton>
+      </template>
+    </UModal>
     <UContainer class="h-[90vh]">
       <UCard
         :ui="{ body: 'flex-1 overflow-y-auto py-4' }"
@@ -50,10 +85,13 @@
 </template>
 
 <script setup>
-const did = 1;
+const did = ref();
 const verticalKey = 'generic';
 
-const { fetchUser, user } = useUser();
+const showUserModal = ref(true);
+const userNameInput = ref("");
+const chatRoomInput = ref("");
+const user = ref();
 
 const messagesComponent = ref(null);
 
@@ -88,8 +126,19 @@ function scrollToBottom() {
   }
 }
 
+function joinChatRoom() {
+  user.value = {
+    id: userNameInput.value,
+    displayName: `test User ${userNameInput.value}`,
+    firstName: 'test',
+    lastName: 'User',
+    email: `testUser${userNameInput.value}@gmail.com`
+  };
+  did.value = chatRoomInput.value;
+  showUserModal.value = false;
+}
+
 onMounted(async () => {
   scrollToBottom();
-  await fetchUser();
 });
 </script>
