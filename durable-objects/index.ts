@@ -91,51 +91,55 @@ async function extractConnectionData(
 // Global storage for connection data and active peers
 let globalEnv: Env;
 let globalDurableObject: any;
-const activePeers = new Map<string, any>();
 
 // Create crossws instance
 const ws = crossws({
   bindingName: "WEBSOCKETS",
   instanceName: "crossws",
   hooks: {
-    async open(peer) {
-      console.log("[crossws] WebSocket opened", peer.id);
-
+    async upgrade(request) {
+      // Handle authentication in upgrade hook
       try {
-        // Extract connection data directly from the request
-        // Since crossws upgrade hook doesn't reliably pass data, we extract it here again
         const secret = globalEnv?.NUXT_WEBSOCKET_SECRET;
         if (!secret) {
           throw new Error('Missing websocket secret');
         }
 
-        // Get the request from peer - this should contain the original request
-        const request = peer.request || globalDurableObject?.lastRequest;
-        if (!request) {
-          throw new Error('No request found in peer context');
-        }
-
         const { room, userEmail, decisionId, verticalKey } =
           await extractConnectionData(request, secret);
 
-        // Store connection data in peer
-        peer.connectionData = { room, userEmail, decisionId, verticalKey };
+        console.log(`[crossws] Authentication successful for: ${userEmail}`);
 
-        // Check for existing connections and close them
-        const existing = activePeers.get(userEmail);
-        if (existing && existing !== peer) {
-          console.log(`[crossws] Closing old connection for ${userEmail}`);
-          try {
-            existing.close(4000, 'Another connection opened');
-          } catch (e) {
-            console.log('Error closing old connection:', e);
-          }
+        // Return namespace (room) so crossws can manage peers properly
+        return {
+          namespace: room,
+          context: { room, userEmail, decisionId, verticalKey }
+        };
+
+      } catch (error) {
+        console.error('[crossws] Authentication failed:', error);
+        return {
+          endResponse: new Response('Unauthorized', { status: 401 })
+        };
+      }
+    },
+
+    async open(peer) {
+      console.log("[crossws] WebSocket opened", peer.id);
+
+      try {
+        // Get connection data from context (set in upgrade hook)
+        const connectionData = peer.context;
+        if (!connectionData) {
+          throw new Error('No connection data in context');
         }
 
-        // Store the new connection
-        activePeers.set(userEmail, peer);
+        const { room, userEmail, decisionId, verticalKey } = connectionData;
 
-        // Subscribe to the room
+        // Store connection data in peer for easy access
+        peer.connectionData = { room, userEmail, decisionId, verticalKey };
+
+        // Subscribe to the room (this should work now with proper namespace)
         peer.subscribe(room);
 
         console.log(`[crossws] User ${userEmail} joined room ${room}`);
@@ -241,9 +245,6 @@ const ws = crossws({
         if (connectionData) {
           console.log(`[crossws] User ${connectionData.userEmail} left room ${connectionData.room}`);
 
-          // Remove from active peers
-          activePeers.delete(connectionData.userEmail);
-
           // Clean up stored name data
           if (globalDurableObject?.state?.storage) {
             try {
@@ -264,8 +265,6 @@ const ws = crossws({
       try {
         const connectionData = peer.connectionData as WebSocketData;
         if (connectionData) {
-          activePeers.delete(connectionData.userEmail);
-
           // Clean up storage
           if (globalDurableObject?.state?.storage) {
             try {
@@ -312,8 +311,6 @@ export class WEBSOCKETS extends DurableObject {
   }
 
   fetch(request: Request) {
-    // Store the request for potential use in hooks
-    this.lastRequest = request;
     return ws.handleDurableUpgrade(this, request);
   }
 
