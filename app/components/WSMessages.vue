@@ -46,45 +46,72 @@
       </div>
     </div>
 
-    <div v-if="status !== 'OPEN'" class="text-center py-2">
+    <!-- Connection Status Messages -->
+    <div v-if="status !== 'CONNECTED'" class="text-center py-4">
       <div class="text-sm text-gray-500">
-        <span v-if="status === 'CONNECTING'">Connecting...</span>
-        <UButton v-else-if="status === 'DISCONNECTED'" label="Disconnected" :loading="loading" @click="connect"/>
-        <span v-else-if="status === 'ERROR'">Connection error</span>
+        <div v-if="status === 'CONNECTING'" class="flex items-center justify-center gap-2">
+          <div class="animate-spin w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full"></div>
+          <span>Connecting to chat...</span>
+        </div>
+        <div v-else-if="status === 'DISCONNECTED'" class="flex flex-col items-center gap-2">
+          <span>Disconnected from chat</span>
+          <UButton
+            size="sm"
+            variant="outline"
+            :loading="loading"
+            @click="$emit('connect')"
+          >
+            Connect
+          </UButton>
+        </div>
+        <div v-else-if="status === 'ERROR'" class="flex flex-col items-center gap-2">
+          <span class="text-red-500">Connection error</span>
+          <UButton
+            size="sm"
+            variant="outline"
+            color="red"
+            :loading="loading"
+            @click="$emit('connect')"
+          >
+            Retry Connection
+          </UButton>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="messages.length === 0" class="text-center py-8">
+      <div class="text-gray-500 text-sm">
+        <p>No messages yet</p>
+        <p class="text-xs mt-1">Start the conversation!</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useWS } from '~/composables/useWS';
-
 const props = defineProps({
-  did: {
-    type: String,
-    required: true
-  },
-  verticalKey: {
-    type: String,
+  messages: {
+    type: Array,
     required: true
   },
   currentUser: {
     type: Object,
     required: true
+  },
+  status: {
+    type: String,
+    required: true
+  },
+  loading: {
+    type: Boolean,
+    default: false
   }
 });
 
-const { loading, messages, sendChat, status, connect, disconnect } = useWS({
-  decisionId: props.did,
-  verticalKey: props.verticalKey,
-  autoReconnect: true,
-  onConnected: () => {
-    console.log(`Connected to decision ${props.did} chat room`);
-  },
-  onError: (error) => {
-    console.error('WebSocket error:', error);
-  }
-});
+const emit = defineEmits(['connect']);
+
+const messagesContainer = ref(null);
 
 function formatTime(date: string) {
   return new Intl.DateTimeFormat('default', {
@@ -94,19 +121,20 @@ function formatTime(date: string) {
   }).format(new Date(date));
 }
 
-function handleSend(content: string) {
-  sendChat(content);
+function scrollToBottom() {
+  if (messagesContainer.value) {
+    nextTick(() => {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+    });
+  }
 }
 
-onMounted(async () => {
-  await connect();
+// Auto-scroll when new messages arrive
+watch(() => props.messages.length, () => {
+  scrollToBottom();
 });
 
-onBeforeUnmount(() => {
-  disconnect();
-});
-
-defineExpose({
-  handleSend
+onMounted(() => {
+  scrollToBottom();
 });
 </script>

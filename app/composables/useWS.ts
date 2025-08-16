@@ -14,61 +14,63 @@ export type WebSocketUser = {
 };
 
 export type WebSocketConfig = {
-  decisionId: string;
-  verticalKey: string;
-  currentUser: object;
   autoReconnect?: boolean;
   onConnected?: () => void;
   onError?: (error: unknown) => void;
   onMessage?: (data: unknown) => void;
 };
 
-export function useWS(config: WebSocketConfig) {
+export function useWS(config: WebSocketConfig = {}) {
   const loading = ref(false);
   const messages = ref<ChatMessage[]>([]);
   const status = ref('DISCONNECTED');
   const isConnected = ref(false);
-  const currentUser = ref(config.currentUser);
-
-  if (!config.decisionId || !config.verticalKey) {
-    console.log('WebSocket not initialized - missing required values:', {
-      decisionId: config.decisionId,
-      verticalKey: config.verticalKey
-    });
-    return {
-      messages: readonly(messages),
-      sendChat: () => {},
-      status: readonly(status),
-      isConnected: readonly(isConnected),
-      connect: () => {},
-      disconnect: () => {},
-      sendMessage: () => {}
-    };
-  }
-
-  // console.log(
-  //   'Initializing WebSocket with:',
-  //   config.decisionId,
-  //   config.verticalKey,
-  //   config.currentUser
-  // );
+  const currentUser = ref(null);
 
   let authToken = '';
   let wsInstance: unknown = null;
+  let connectionParams = {
+    decisionId: '',
+    verticalKey: '',
+    user: null
+  };
+
+  // Initialize connection parameters without connecting
+  function initialize(decisionId: string, verticalKey: string, user: object) {
+    connectionParams = { decisionId, verticalKey, user };
+    currentUser.value = user;
+
+    if (!decisionId || !verticalKey) {
+      console.warn('WebSocket initialization - missing required values:', {
+        decisionId,
+        verticalKey
+      });
+      return false;
+    }
+    return true;
+  }
 
   async function connect() {
+    if (!connectionParams.decisionId || !connectionParams.verticalKey) {
+      console.error('Cannot connect - WebSocket not initialized. Call initialize() first.');
+      return;
+    }
+
     if (isConnected.value || loading.value) {
       console.log('WebSocket already connected or connecting');
       return;
     }
+
     loading.value = true;
+    status.value = 'CONNECTING';
+
     try {
       // Get auth token
       const response = await $fetch('/api/ws/validate', {
         method: 'POST',
         body: {
-          decisionId: config.decisionId,
-          verticalKey: config.verticalKey
+          decisionId: connectionParams.decisionId,
+          verticalKey: connectionParams.verticalKey
         }
       });
 
@@ -77,13 +79,14 @@ export function useWS(config: WebSocketConfig) {
       currentUser.value = response.user;
 
       // Create protocol
-      const connectionData = `${config.decisionId}:${config.verticalKey}:${currentUser.value.email}:${authToken}`;
+      const connectionData = `${connectionParams.decisionId}:${connectionParams.verticalKey}:${currentUser.value.email}:${authToken}`;
       const protocol = btoa(connectionData);
 
-      // connect to Durable Object directly
+      // Connect to Durable Object directly
       wsInstance = useWebSocket(response.websocketUrl, {
         protocols: [protocol.replaceAll('=', ''), 'chat'],
         autoReconnect: config.autoReconnect ?? false,
+        immediate: false, // Don't connect immediately
         onConnected: () => {
           console.log('WebSocket connected');
           isConnected.value = true;
@@ -139,6 +142,7 @@ export function useWS(config: WebSocketConfig) {
         }
       });
 
+      // Small delay then open connection
       await new Promise((r) => setTimeout(r, 500));
       wsInstance.open();
     } catch (error) {
@@ -152,7 +156,7 @@ export function useWS(config: WebSocketConfig) {
     }
   }
 
-  function sendChatMsg(content: string) {
+  function sendChat(content: string) {
     if (!isConnected.value || !wsInstance) {
       console.warn('Cannot send message - WebSocket not connected');
       return;
@@ -185,16 +189,28 @@ export function useWS(config: WebSocketConfig) {
       wsInstance.close();
       wsInstance = null;
     }
+    isConnected.value = false;
+    status.value = 'DISCONNECTED';
+  }
+
+  function clearMessages() {
+    messages.value = [];
   }
 
   return {
+    // State
     messages: readonly(messages),
-    sendChat: sendChatMsg,
-    sendMessage,
     status: readonly(status),
     isConnected: readonly(isConnected),
+    currentUser: readonly(currentUser),
+    loading: readonly(loading),
+
+    // Actions
+    initialize,
     connect,
     disconnect,
-    loading
+    sendChat,
+    sendMessage,
+    clearMessages
   };
 }
