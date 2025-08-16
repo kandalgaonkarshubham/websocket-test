@@ -228,7 +228,11 @@ const ws = crossws({
           };
 
           console.log('[crossws] Publishing chat message to room:', room);
+
           peer.publish(room, chatData);
+
+          // send data back to sender
+          peer.send(chatData);
 
         } else if (parsed.type === 'name') {
           if (typeof parsed.name !== 'string' || parsed.name.trim().length === 0) {
@@ -256,7 +260,6 @@ const ws = crossws({
 
           console.log('[crossws] Publishing name update to room:', room);
           peer.publish(room, nameData);
-
         } else {
           throw new Error('Unknown message type');
         }

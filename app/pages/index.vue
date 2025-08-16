@@ -20,6 +20,7 @@
           <UFormField label="Decision Id">
             <UInput
               v-model="chatRoomInput"
+              :default-value="1"
               placeholder="Enter chat Decision Id"
               class="w-full"
             />
