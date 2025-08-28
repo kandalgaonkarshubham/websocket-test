@@ -17,15 +17,7 @@ function createHmacToken(
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
 
-  const { decisionId, verticalKey } = body;
-
-  const user = {
-    id: 1,
-    displayName: 'test User',
-    firstName: 'test',
-    lastName: 'User',
-    email: 'testUser@gmail.com'
-  }
+  const { decisionId, verticalKey, email } = body;
 
   const hasAccess = true;
   if (!hasAccess) {
@@ -36,12 +28,12 @@ export default defineEventHandler(async (event) => {
   }
 
   // Generate a hmac token
-  const token = createHmacToken(decisionId, verticalKey, user.email);
+  const token = createHmacToken(decisionId, verticalKey, email);
 
   return {
     success: true,
     token,
-    user,
+    // user,
     websocketUrl: process.env.NUXT_PUBLIC_WEBSOCKETS_URL
   };
 });

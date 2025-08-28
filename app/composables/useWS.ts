@@ -68,13 +68,13 @@ export function useWS(config: WebSocketConfig) {
         method: 'POST',
         body: {
           decisionId: config.decisionId,
-          verticalKey: config.verticalKey
+          verticalKey: config.verticalKey,
+          email: currentUser.value.email
         }
       });
 
       if (!response.success) throw new Error('Token fetch failed');
       authToken = response.token;
-      currentUser.value = response.user;
 
       // Create protocol
       const connectionData = `${config.decisionId}:${config.verticalKey}:${currentUser.value.email}:${authToken}`;
